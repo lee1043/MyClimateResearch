@@ -138,7 +138,7 @@ def Get_SegmentAveraged_PowerSpectrum_and_RedNoise(d, SegmentLength, TaperingRat
             # Count number of segments to be used for averaging
             num_segs += 1
             
-            print 'segment', i, ie
+            print 'segment (num)', i, ie, '(', num_segs, ')'
 
     freqs_avg = MV2.divide(freqs_segs,num_segs)
     psd_avg = MV2.divide(psd_segs,num_segs)

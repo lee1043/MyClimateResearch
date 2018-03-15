@@ -14,7 +14,8 @@ def PowerSpectrumAnalysis(d, debug=False):
 #------------------------------------------------------------
   # Power spectrum analysis
   segments, freqs, psd, rn, r1 = Get_SegmentAveraged_PowerSpectrum_and_RedNoise(
-      d, SegmentLength=len(d), TaperingRatio=0.98)
+      d, SegmentLength=len(d), TaperingRatio=0.2)
+      #d, SegmentLength=len(d), TaperingRatio=0)
   
   # Significance level derived from red noise
   siglevel = RedNoiseSignificanceLevel(segments, rn)
@@ -41,10 +42,21 @@ modes = ['SAM']
 modes = ['PDO']
 modes = ['NAM', 'NAO', 'PNA', 'SAM', 'PDO']
 
-PlotOn = True
-#PlotOn = False
+PlotOn_xlog = True
+#PlotOn_xlog = False
+
+PlotOn_xlinear = True
+#PlotOn_xlinear = False
 
 outdir = './result'
+#------------------------------------------------------------
+
+debug = True
+modes = ['PDO']
+
+if debug:
+  outdir = './result_test'
+#------------------------------------------------------------
 
 for mode in modes:
 
@@ -90,23 +102,29 @@ for mode in modes:
     modfiles = modfileframe.replace('MODEL','*').replace('REAL','*').replace('MODE',mode).replace('VAR',varname)
     
     ncfile_list = glob.glob(os.path.join(basedir,tier1,tier2,obsfiles))
-    ncfile_list.extend(glob.glob(os.path.join(basedir,tier1,tier2,modfiles)))
-    #ncfile_list = [ncfile_list[0]]
-    #print 'ncfile_list: ', ncfile_list
+
+    if not debug:
+      ncfile_list.extend(glob.glob(os.path.join(basedir,tier1,tier2,modfiles)))
     
     for ncfile in sorted(ncfile_list):
-    
-      #print 'ncfile: ', ncfile
     
       figfilename = ncfile.split('/')[-1].split('.')[0]
       print 'figfilename: ', figfilename
   
       if figfilename.split('_')[4] == 'obs':
-          title = mode+', OBS ['+obs_data+']'
+        title = mode+', OBS ['+obs_data+']'
+        if debug:
+          PlotOn = True
       else:
         model = figfilename.split('_')[5]
         run = figfilename.split('_')[7]
         title = mode+', '+model+' ('+run+')'
+
+        if debug:
+          if run == 'r1i1p1':
+            PlotOn = True
+          else:
+            PlotOn = False
     
       f = cdms2.open(ncfile)
       d = f(varname_pc)
@@ -115,11 +133,20 @@ for mode in modes:
       freqs, psd, rn, siglevel, r1, hpf, psd_max = PowerSpectrumAnalysis(d)
     
       # Plot
-      if PlotOn:
-        figfile = os.path.join(outdir,mode+'_'+obs_data,figfilename+'.png')
+      if PlotOn_xlog:
+        figfile = os.path.join(outdir,mode+'_'+obs_data,figfilename+'_xlog.png')
         plot_psd(freqs, psd, rn, siglevel, 
                  r1=r1, hpf=hpf, 
                  logScale=True, seg_length_yr=len(d)/12, 
+                 AnnotatePeaks=True, 
+                 title=title,
+                 outfile=figfile)
+
+      if PlotOn_xlinear:
+        figfile = os.path.join(outdir,mode+'_'+obs_data,figfilename+'_xlin.png')
+        plot_psd(freqs, psd, rn, siglevel, 
+                 r1=r1, hpf=hpf, 
+                 logScale=False, seg_length_yr=len(d)/12, 
                  AnnotatePeaks=True, 
                  title=title,
                  outfile=figfile)

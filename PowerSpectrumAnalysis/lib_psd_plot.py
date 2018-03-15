@@ -24,29 +24,14 @@ def plot_psd(freqs, psd, rn, siglevel,
     
     fig = plt.figure(figsize=(6, 5))
     ax1 = fig.add_subplot(111)
-    ax2 = ax1.twiny()
-    
-    new_tick_labels = [seg_length_yr]
-    #for yr in [100, 10, 5, 3, 2, 1, 0.5]:
-    for yr in [10, 5, 3, 2, 1, 0.5]:
-        if yr < seg_length_yr:
-            new_tick_labels.append(yr)
     
     if logScale:
         ax1.set_xscale('log')
-        ax2.set_xscale('log')
-        ax2.get_xaxis().set_tick_params(which='minor', size=0)
-        ax2.get_xaxis().set_tick_params(which='minor', width=0) 
 
     ax1.plot(freqs, psd, c='k')
     ax1.plot(freqs, rn, c='red')
     ax1.plot(freqs, siglevel, c='green')
         
-    new_tick_locations = 1/(np.array(new_tick_labels)*12.)
-    ax2.set_xlim(ax1.get_xlim())
-    ax2.set_xticks(new_tick_locations)
-    ax2.set_xticklabels(new_tick_labels)    
-
     if AnnotatePeaks:
 
         # Mark maximum peak
@@ -83,18 +68,36 @@ def plot_psd(freqs, psd, rn, siglevel,
         ax1.set_ylim(top=max_peak_psd*1.1+1)
 
     if logScale:
-        ax1.set_xlim(right=freqs[-1])
+        ax1.set_xlim(left=freqs[1],right=freqs[-1])
     else:
         ax1.set_xlim(0,1/12.)
 
     ax1.set_ylim(bottom=0)
     ax1.set_ylabel(yaxislabel)
     ax1.set_xlabel('Frequency (cycles mo$^-$$^1$)')
-    ax2.set_xlabel('Period (years)')
     plt.title(title)
 
-    ymin, ymax = plt.ylim()
-    xmin, xmax = plt.xlim()
+    SecondXaxisOnTop = True
+    if SecondXaxisOnTop:
+
+      ax2 = ax1.twiny()
+      ax2_xend = 1/(ax1.get_xlim()[1]*12.)
+  
+      new_tick_labels = [seg_length_yr]
+      for yr in [10, 5, 3, 2, 1, 0.5]:
+          if yr < seg_length_yr and yr >= ax2_xend:
+              new_tick_labels.append(yr)
+  
+      if logScale:
+          ax2.set_xscale('log')
+          ax2.get_xaxis().set_tick_params(which='minor', size=0)
+          ax2.get_xaxis().set_tick_params(which='minor', width=0)
+  
+      new_tick_locations = 1./(np.array(new_tick_labels)*12.)
+      ax2.set_xlim(ax1.get_xlim())
+      ax2.set_xticks(new_tick_locations)
+      ax2.set_xticklabels(new_tick_labels)
+      ax2.set_xlabel('Period (years)')
 
     # Statistics on plot
     xt = 0.75 # x location for text, 0(left)~1(right) in graph
