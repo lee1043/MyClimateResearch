@@ -10,6 +10,38 @@ import vcs
 from scipy import signal
 from scipy.stats import chi2
 
+#------------------------------------------------------------
+def PowerSpectrumAnalysis(d, SegmentLength, TaperingRatio=0.2, SegmentOverlapping=False, debug=False):
+
+  # Power spectrum analysis
+  segments, freqs, psd, rn, r1 = Get_SegmentAveraged_PowerSpectrum_and_RedNoise(
+      d, SegmentLength=SegmentLength, TaperingRatio=TaperingRatio, SegmentOverlapping=SegmentOverlapping)
+
+  # Significance level derived from red noise
+  siglevel = RedNoiseSignificanceLevel(segments, rn)
+
+  # Find half point
+  hp, hpf = FindHalfPoint(psd, freqs)
+
+  # Max psd
+  psd_max = max(psd)
+
+  if debug:
+    print 'lag-1 auto-correlation :', r1
+    print 'half point (harmonic) :', hp
+    print 'half point (freq) :', hpf
+    print 'max psd :', psd_max
+
+  return freqs, psd, rn, siglevel, r1, hpf, psd_max
+
+#------------------------------------------------------------
+def calcSTD(a):
+  # Calculate standard deviation
+  # a: cdms 1d variables 
+  result = float(genutil.statistics.std(a, biased=0)) # biased=0 option enables divided by N-1 instead of N
+  return result
+
+#------------------------------------------------------------
 def readDataTextIn(f):
     d=[]
     for line in f:
@@ -23,6 +55,7 @@ def readDataTextIn(f):
     d = np.array(d)
     return d
 
+#------------------------------------------------------------
 def taper(data_in,t_frac):
     """ 
     INPUT TIME SERIES OF LENGTH IKT TO APPLY A SPLIT-COSINE BELL TAPER
@@ -46,10 +79,12 @@ def taper(data_in,t_frac):
 
     return (data)
 
+#------------------------------------------------------------
 def lag1_autocorrelation(x):
     result = float(genutil.statistics.autocorrelation(x, lag=1)[-1])
     return result
 
+#------------------------------------------------------------
 def rednoise(VAR,NUMHAR,R1):
     """
     Modification of K. Sperber's FORTRAN code:
@@ -78,6 +113,7 @@ def rednoise(VAR,NUMHAR,R1):
 
     return (RN)
 
+#------------------------------------------------------------
 def RedNoiseSignificanceLevel(segments, rn):   
     """
     nu is the number of degrees of freedom (2 in case of an fft). 
@@ -97,6 +133,7 @@ def RedNoiseSignificanceLevel(segments, rn):
     siglevel = MV2.multiply(rn, factor)
     return siglevel
 
+#------------------------------------------------------------
 def Get_SegmentAveraged_PowerSpectrum_and_RedNoise(d, SegmentLength, TaperingRatio, SegmentOverlapping=False):
     seg_starting_i = []
     segments = []
@@ -147,6 +184,7 @@ def Get_SegmentAveraged_PowerSpectrum_and_RedNoise(d, SegmentLength, TaperingRat
     
     return segments, np.array(freqs_avg), np.array(psd_avg), np.array(rn_avg), r1_avg
 
+#------------------------------------------------------------
 def FindHalfPoint(y,freqs):
     x = range(len(y)) # harmonics    
     asum = sum(y) # sum of powers

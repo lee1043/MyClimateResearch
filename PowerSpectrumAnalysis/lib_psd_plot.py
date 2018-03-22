@@ -16,7 +16,7 @@ def plot_psd(freqs, psd, rn, siglevel,
              logScale=False, yaxislabel='Power', seg_length_yr=50,
              AnnotatePeaks=False, num_peak_to_plot=5,
              title='PSD: power spectral density', outfile='test_plot.png'):
-    
+
     freqs = np.array(freqs)
     psd = np.array(psd)
     rn = np.array(rn)
@@ -70,7 +70,8 @@ def plot_psd(freqs, psd, rn, siglevel,
     if logScale:
         ax1.set_xlim(left=freqs[1],right=freqs[-1])
     else:
-        ax1.set_xlim(0,1/12.)
+        #ax1.set_xlim(0,1/12.)
+        pass
 
     ax1.set_ylim(bottom=0)
     ax1.set_ylabel(yaxislabel)

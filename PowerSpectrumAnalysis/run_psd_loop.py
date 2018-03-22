@@ -1,61 +1,34 @@
 import cdms2
+import cdutil
+import genutil
 import glob
 import matplotlib.pyplot as plt
+import MV2
 import os
 import pcmdi_metrics
 import sys
 
 from collections import defaultdict
 from lib_psd import *
-from lib_psd_plot import *
+from lib_psd_plot import plot_psd
+from pcmdi_metrics.pcmdi.pmp_parser import PMPParser
 
-#============================================================
-def PowerSpectrumAnalysis(d, debug=False):
 #------------------------------------------------------------
-  # Power spectrum analysis
-  segments, freqs, psd, rn, r1 = Get_SegmentAveraged_PowerSpectrum_and_RedNoise(
-      d, SegmentLength=len(d), TaperingRatio=0.2)
-      #d, SegmentLength=len(d), TaperingRatio=0)
-  
-  # Significance level derived from red noise
-  siglevel = RedNoiseSignificanceLevel(segments, rn)
-  
-  # Find half point
-  hp, hpf = FindHalfPoint(psd, freqs)
-  
-  # Max psd
-  psd_max = max(psd)
-
-  if debug:
-    print 'lag-1 auto-correlation :', r1
-    print 'half point (harmonic) :', hp
-    print 'half point (freq) :', hpf
-    print 'max psd :', psd_max
-  
-  return freqs, psd, rn, siglevel, r1, hpf, psd_max
+# Read from "my_Param.py"
+# How to run: python run_psd_loop.py -p my_Param.py
 #------------------------------------------------------------
+P = PMPParser() # Includes all default options
+param = P.get_parameter()
 
-modes = ['NAM']
-modes = ['NAO']
-modes = ['PNA']
-modes = ['SAM']
-modes = ['PDO']
-modes = ['NAM', 'NAO', 'PNA', 'SAM', 'PDO']
-
-PlotOn_xlog = True
-#PlotOn_xlog = False
-
-PlotOn_xlinear = True
-#PlotOn_xlinear = False
-
-outdir = './result'
-#------------------------------------------------------------
-
-debug = True
-modes = ['PDO']
-
-if debug:
-  outdir = './result_test'
+modes = param.modes
+PlotOn_xlog = param.PlotOn_xlog
+PlotOn_xlinear = param.PlotOn_xlinear
+NormalizePCts = param.NormalizePCts
+outdir = param.outdir
+TaperingRatio = param.TaperingRatio
+SegmentLengthRatio = param.SegmentLengthRatio
+SegmentOverlapping = param.SegmentOverlapping
+debug = param.debug # if debug=True, run only for obs, not models
 #------------------------------------------------------------
 
 for mode in modes:
@@ -129,15 +102,27 @@ for mode in modes:
       f = cdms2.open(ncfile)
       d = f(varname_pc)
       f.close()
-    
-      freqs, psd, rn, siglevel, r1, hpf, psd_max = PowerSpectrumAnalysis(d)
+
+      if NormalizePCts:
+        d = MV2.divide(d,float(calcSTD(d)))
+
+      d_avg = cdutil.averager(d,axis='0')
+      print 'series mean: ', d_avg
+
+      SegmentLength = int(len(d)*SegmentLengthRatio)
+
+      freqs, psd, rn, siglevel, r1, hpf, psd_max = PowerSpectrumAnalysis(
+           d, SegmentLength, 
+           TaperingRatio=TaperingRatio, 
+           SegmentOverlapping=SegmentOverlapping,
+           debug=debug)
     
       # Plot
       if PlotOn_xlog:
         figfile = os.path.join(outdir,mode+'_'+obs_data,figfilename+'_xlog.png')
         plot_psd(freqs, psd, rn, siglevel, 
                  r1=r1, hpf=hpf, 
-                 logScale=True, seg_length_yr=len(d)/12, 
+                 logScale=True, seg_length_yr=SegmentLength/12, 
                  AnnotatePeaks=True, 
                  title=title,
                  outfile=figfile)
@@ -146,7 +131,7 @@ for mode in modes:
         figfile = os.path.join(outdir,mode+'_'+obs_data,figfilename+'_xlin.png')
         plot_psd(freqs, psd, rn, siglevel, 
                  r1=r1, hpf=hpf, 
-                 logScale=False, seg_length_yr=len(d)/12, 
+                 logScale=False, seg_length_yr=SegmentLength/12, 
                  AnnotatePeaks=True, 
                  title=title,
                  outfile=figfile)
