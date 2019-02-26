@@ -1,0 +1,8 @@
+'set mproj nps'
+'set mpdset mres'
+'set mpvals 103.0 152 22.0 53.0'
+'set csmooth on'
+'set map 15 1 9'
+'set grid on 2 15'
+'set xlint 10'
+'set ylint 10'

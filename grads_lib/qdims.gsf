@@ -1,0 +1,468 @@
+***************************************************************************************
+* $Id: qdims.gsf,v 1.45 2014/01/25 01:50:27 bguan Exp $
+*
+* Copyright (c) 2012, Bin Guan
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without modification, are
+* permitted provided that the following conditions are met:
+*
+* 1. Redistributions of source code must retain the above copyright notice, this list
+*    of conditions and the following disclaimer.
+*
+* 2. Redistributions in binary form must reproduce the above copyright notice, this
+*    list of conditions and the following disclaimer in the documentation and/or other
+*    materials provided with the distribution.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+* EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+* OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+* SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+* TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+* ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+* DAMAGE.
+***************************************************************************************
+function qdims()
+*
+* Query and set (integerize) dimensions.
+*
+if(_lonsOLD!='_lonsOLD')
+prompt '[qdims WARNING] Global variables already defined. Enter to continue anyway...'
+pull nothing
+endif
+
+fmt='%.12g'
+
+'query dims'
+lx=sublin(result,2)
+ly=sublin(result,3)
+lz=sublin(result,4)
+lt=sublin(result,5)
+
+*
+* Get dimension information BEFORE coordinate integerization.
+*
+
+*
+* x dimension.
+*
+if(subwrd(lx,7)='to')
+  _lonsOLD=subwrd(lx,6)
+  _loneOLD=subwrd(lx,8)
+  _xsOLD=subwrd(lx,11)
+  _xeOLD=subwrd(lx,13)
+else
+  _lonsOLD=subwrd(lx,6)
+  _loneOLD=subwrd(lx,6)
+  _xsOLD=subwrd(lx,9)
+  _xeOLD=subwrd(lx,9)
+endif
+_resetx='set x '_xsOLD' '_xeOLD
+
+*
+* y dimension.
+*
+if(subwrd(ly,7)='to')
+  _latsOLD=subwrd(ly,6)
+  _lateOLD=subwrd(ly,8)
+  _ysOLD=subwrd(ly,11)
+  _yeOLD=subwrd(ly,13)
+else
+  _latsOLD=subwrd(ly,6)
+  _lateOLD=subwrd(ly,6)
+  _ysOLD=subwrd(ly,9)
+  _yeOLD=subwrd(ly,9)
+endif
+_resety='set y '_ysOLD' '_yeOLD
+
+*
+* z dimension.
+*
+if(subwrd(lz,7)='to')
+  _levsOLD=subwrd(lz,6)
+  _leveOLD=subwrd(lz,8)
+  _zsOLD=subwrd(lz,11)
+  _zeOLD=subwrd(lz,13)
+else
+  _levsOLD=subwrd(lz,6)
+  _leveOLD=subwrd(lz,6)
+  _zsOLD=subwrd(lz,9)
+  _zeOLD=subwrd(lz,9)
+endif
+_resetz='set z '_zsOLD' '_zeOLD
+
+*
+* t dimension.
+*
+if(subwrd(lt,7)='to')
+  _timsOLD=subwrd(lt,6)
+  _timeOLD=subwrd(lt,8)
+  _tsOLD=subwrd(lt,11)
+  _teOLD=subwrd(lt,13)
+else
+  _timsOLD=subwrd(lt,6)
+  _timeOLD=subwrd(lt,6)
+  _tsOLD=subwrd(lt,9)
+  _teOLD=subwrd(lt,9)
+endif
+_resett='set t '_tsOLD' '_teOLD
+
+*
+* Calendar (_cal will be either empty or keyword for .ctl).
+*
+'query calendar'
+_cal=subwrd(result,1)
+if(_cal='calendar')
+_cal=''
+say '[qdims info] 'sublin(result,1)'; standard calendar is assumed.'
+endif
+if(_cal='standard')
+_cal=''
+endif
+if(_cal='365-day')
+_cal='365_day_calendar'
+endif
+
+*
+* Integerize x-coordinates.
+*
+'set x 'math_nint(_xsOLD)' 'math_nint(_xeOLD)
+
+*
+* Ensure x-coordinates have no redundant points.
+*
+'query dims'
+lx=sublin(result,2)
+if(subwrd(lx,7)='to')
+  lonsTMP=subwrd(lx,6)
+  loneTMP=subwrd(lx,8)
+  xsTMP=subwrd(lx,11)
+  xeTMP=subwrd(lx,13)
+else
+  lonsTMP=subwrd(lx,6)
+  loneTMP=subwrd(lx,6)
+  xsTMP=subwrd(lx,9)
+  xeTMP=subwrd(lx,9)
+endif
+if(loneTMP-lonsTMP>=360)
+  rddnt_points=(loneTMP-lonsTMP-360)/((loneTMP-lonsTMP)/(xeTMP-xsTMP))+1
+  'set x 'xsTMP' 'xeTMP-rddnt_points
+endif
+
+*
+* Integerize y-coordinates.
+*
+'set y 'math_nint(_ysOLD)' 'math_nint(_yeOLD)
+
+*
+* Get dimension information AFTER coordinate integerization.
+* Method is different from earlier to get more significant digits for world coordinates.
+*
+
+'query dims'
+lx=sublin(result,2)
+ly=sublin(result,3)
+lz=sublin(result,4)
+lt=sublin(result,5)
+
+*
+* x dimension.
+*
+if(subwrd(lx,7)='to')
+*
+* x is not fixed.
+*
+  _xs=subwrd(lx,11)
+  _xe=subwrd(lx,13)
+  'set x '_xs
+  'set y 1'
+  'set z 1'
+  'set t 1'
+  _lons=getval('lon',fmt)
+  'set x '_xe
+  'set y 1'
+  'set z 1'
+  'set t 1'
+  _lone=getval('lon',fmt)
+  _nx=_xe-_xs+1
+  _dlon=(_lone-_lons)/(_xe-_xs)
+  _xdef='XDEF '_nx' LINEAR '_lons' '_dlon
+else
+*
+* x is fixed.
+*
+  _xs=subwrd(lx,9);
+  _xe=subwrd(lx,9);
+  'set x '_xs
+  'set y 1'
+  'set z 1'
+  'set t 1'
+  _lons=getval('lon',fmt)
+  'set x '_xe
+  'set y 1'
+  'set z 1'
+  'set t 1'
+  _lone=getval('lon',fmt)
+  _nx=_xe-_xs+1
+  _dlon=9.87654321
+  _xdef='XDEF '_nx' LEVELS '_lons
+endif
+
+*
+* y dimension.
+*
+if (subwrd(ly,7)='to')
+*
+* y is not fixed.
+*
+  _ys=subwrd(ly,11); if(_ys<1 & _ys>0.99999);_ys=1;endif
+  _ye=subwrd(ly,13)
+  'set x 1'
+  'set y '_ys
+  'set z 1'
+  'set t 1'
+  _lats=getval('lat',fmt)
+  'set x 1'
+  'set y '_ye
+  'set z 1'
+  'set t 1'
+  _late=getval('lat',fmt)
+  _ny=_ye-_ys+1
+  _dlat=(_late-_lats)/(_ye-_ys)
+  _ydef='YDEF '_ny' LINEAR '_lats' '_dlat
+else
+*
+* y is fixed.
+*
+  _ys=subwrd(ly,9)
+  _ye=subwrd(ly,9)
+  'set x 1'
+  'set y '_ys
+  'set z 1'
+  'set t 1'
+  _lats=getval('lat',fmt)
+  'set x 1'
+  'set y '_ye
+  'set z 1'
+  'set t 1'
+  _late=getval('lat',fmt)
+  _ny=_ye-_ys+1
+  _dlat=9.87654321
+  _ydef='YDEF '_ny' LEVELS '_lats
+endif
+
+*
+* If y is not linear (e.g., Gaussian).
+*
+if(ylinlev()='levels' | ylinlev()='LEVELS')
+* begin trick to get a new line character
+  'nonexistentvar=1'
+  'query defval nonexistentvar 1 1'
+  newlinechar=substr(result,12,1)
+  'undefine nonexistentvar'
+* end trick
+  _ydef='YDEF '_ny' LEVELS'
+  cnt=_ys
+  while(cnt<=_ye)
+    'set x 1'
+    'set y 'cnt
+    'set z 1'
+    'set t 1'
+    if(math_mod(cnt,10)=1 & cnt>1)
+      _ydef=_ydef' 'newlinechar
+    endif
+    _ydef=_ydef' 'getval('lat',fmt)
+    cnt=cnt+1
+  endwhile
+endif
+
+*
+* z dimension.
+*
+if (subwrd(lz,7)='to')
+*
+* z is not fixed.
+*
+  _zs=subwrd(lz,11)
+  _ze=subwrd(lz,13)
+  'set x 1'
+  'set y 1'
+  'set z '_zs
+  'set t 1'
+  _levs=getval('lev',fmt)
+  'set x 1'
+  'set y 1'
+  'set z '_ze
+  'set t 1'
+  _leve=getval('lev',fmt)
+  _nz=_ze-_zs+1
+  _dlev=(_leve-_levs)/(_ze-_zs)
+  _zdef='ZDEF '_nz' LINEAR '_levs' '_dlev
+else
+*
+* z is fixed.
+*
+  _zs=subwrd(lz,9)
+  _ze=subwrd(lz,9)
+  'set x 1'
+  'set y 1'
+  'set z '_zs
+  'set t 1'
+  _levs=getval('lev',fmt)
+  'set x 1'
+  'set y 1'
+  'set z '_ze
+  'set t 1'
+  _leve=getval('lev',fmt)
+  _nz=_ze-_zs+1
+  _dlev=9.87654321
+  _zdef='ZDEF '_nz' LEVELS '_levs
+endif
+if(_nz=1)
+_nz0=0
+else
+_nz0=_nz
+endif
+
+*
+* If z is not linear (usually the case).
+*
+if(zlinlev()='levels' | zlinlev()='LEVELS')
+* my trick to get a new line character
+  'nonexistentvar=1'
+  'q defval nonexistentvar 1 1'
+  newlinechar=substr(result,12,1)
+  'undefine nonexistentvar'
+* end trick
+  _zdef='ZDEF '_nz' LEVELS'
+  cnt=_zs
+  while(cnt<=_ze)
+    'set x 1'
+    'set y 1'
+    'set z 'cnt
+    'set t 1'
+    if(math_mod(cnt,10)=1 & cnt>1)
+      _zdef=_zdef' 'newlinechar
+    endif
+    _zdef=_zdef' 'getval('lev',fmt)
+    cnt=cnt+1
+  endwhile
+endif
+
+*
+* t dimension.
+*
+if (subwrd(lt,7)='to')
+*
+* t is not fixed.
+*
+  _tims=subwrd(lt,6)
+  _time=subwrd(lt,8)
+  _ts=subwrd(lt,11)
+  _te=subwrd(lt,13)
+else
+*
+* t is fixed.
+*
+  _tims=subwrd(lt,6)
+  _time=subwrd(lt,6)
+  _ts=subwrd(lt,9)
+  _te=subwrd(lt,9)
+endif
+_yrs=substr(_tims,math_strlen(_tims)-3,math_strlen(_tims))
+_yre=substr(_time,math_strlen(_time)-3,math_strlen(_time))
+* In the above two lines, year is obtained as the last four digits of the time expression. This is always correct.
+* If count from the left, the digit location will depend on whether minutes are specified in the time expression (e.g., 00Z01JAN1999 vs. 00:00Z01JAN1999).
+_nt=_te-_ts+1
+_dtim=time_incr()
+_tdef='TDEF '_nt' LINEAR '_tims' '_dtim
+
+'set x '_xs' '_xe
+'set y '_ys' '_ye
+'set z '_zs' '_ze
+'set t '_ts' '_te
+
+return
+***************************************************************************************
+function time_incr()
+*
+* Get time increment from the default .ctl file.
+*
+'query ctlinfo'
+if(result='No Files Open')
+return 'unknown'
+endif
+
+lines=1
+while(1)
+lin=sublin(result,lines)
+if(subwrd(lin,1)='tdef' | subwrd(lin,1)='TDEF')
+return subwrd(lin,5)
+endif
+lines=lines+1
+endwhile
+***************************************************************************************
+function ylinlev()
+*
+* Determine if y is linear or levels based on the default .ctl file.
+*
+'query ctlinfo'
+if(result='No Files Open')
+return 'unknown'
+endif
+
+lines=1
+while(1)
+lin=sublin(result,lines)
+if(subwrd(lin,1)='ydef' | subwrd(lin,1)='YDEF')
+return subwrd(lin,3)
+endif
+lines=lines+1
+endwhile
+***************************************************************************************
+function zlinlev()
+*
+* Determine if z is linear or levels based on the default .ctl file.
+*
+'query ctlinfo'
+if(result='No Files Open')
+return 'unknown'
+endif
+
+lines=1
+while(1)
+lin=sublin(result,lines)
+if(subwrd(lin,1)='zdef' | subwrd(lin,1)='ZDEF')
+return subwrd(lin,3)
+endif
+lines=lines+1
+endwhile
+***************************************************************************************
+function getval(expr,fmt)
+*
+* Return value of a GrADS expression in designated format.
+*
+* Note 1: By default, GrADS only displays 6 significant digits (%.6g) when using 'display ...' or 'query defval ...'.
+*         A trick is used below to overcome that limitation (up to 15 significant digits can be returned).
+* Note 2: 'display ...' or 'set gxout print' is not used here for getting variable values since that will trigger a bug that prevents the base map from being displayed in contour plots.
+*
+* Example: sst=getval('sst','%.1f')
+*          Note that sst is quoted.
+*
+'nonexistentvar='expr
+'query defval nonexistentvar 1 1'
+part1=subwrd(result,3)
+if(part1='missing');return 'NaN';endif
+'nonexistentvar='expr'-'part1
+'query defval nonexistentvar 1 1'
+part2=subwrd(result,3)
+'nonexistentvar='expr'-'part1'-'part2
+'query defval nonexistentvar 1 1'
+part3=subwrd(result,3)
+'undefine nonexistentvar'
+
+return math_format(fmt,part1+part2+part3)
+
